@@ -1,0 +1,17 @@
+jobs:
+  workflows: { runs-on: ubuntu-latest, steps: [ { uses: actions/checkout@v4 }, { uses: raven-actions/actionlint@v2 } ] }
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          helm lint kubernetes/helm/charts/*
+          helm template kubernetes/helm/charts/sample-api | kubeconform -strict -summary
+  kustomize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: for o in kubernetes/kustomize/overlays/*; do kustomize build $o | kubeconform -strict; done
+  dockerfiles: { ... hadolint }
+  terraform:   { ... terraform fmt -check && terraform validate }
+  shell:       { ... shellcheck scripts/*.sh }

@@ -1,0 +1,19 @@
+pipeline {
+  agent { kubernetes { yamlFile 'ci/jenkins/pod-templates/build-pod.yaml' } }
+  options { timeout(time: 20, unit: 'MINUTES'); buildDiscarder(logRotator(numToKeepStr: '10')) }
+  stages {
+    stage('Test') {
+      steps { container('python') { sh 'pip install -r apps/sample-api/requirements.txt && pytest --junitxml=reports/junit.xml' } }
+    }
+    stage('Helm lint') {
+      steps { container('helm') { sh 'helm lint kubernetes/helm/charts/sample-api' } }
+    }
+    stage('Deploy dev') {
+      when { branch 'main' }
+      steps { container('helm') {
+        sh 'helm upgrade --install sample-api kubernetes/helm/charts/sample-api -n dev --create-namespace -f kubernetes/helm/charts/sample-api/values-dev.yaml'
+      } }
+    }
+  }
+  post { always { junit allowEmptyResults: true, testResults: 'reports/*.xml' } }
+}
